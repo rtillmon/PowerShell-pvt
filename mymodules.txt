@@ -1,0 +1,9 @@
+ActiveDirectory
+PowerShellGet
+PackageManagement
+Azure
+Azure.Storage
+AzureRM.Profile
+Microsoft.PowerShell.Management
+Microsoft.PowerShell.Security
+Microsoft.PowerShell.Utility
