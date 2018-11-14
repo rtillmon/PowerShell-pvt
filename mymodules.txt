@@ -4,6 +4,10 @@ PackageManagement
 Azure
 Azure.Storage
 AzureRM.Profile
+AzureRM.Automation
 Microsoft.PowerShell.Management
 Microsoft.PowerShell.Security
 Microsoft.PowerShell.Utility
+Posh-SSH
+posh-git
+PSWindowsUpdate

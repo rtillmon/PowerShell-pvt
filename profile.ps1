@@ -1,4 +1,4 @@
-#Requires -RunAsAdministrator
+﻿#Requires -RunAsAdministrator
 # PowerShell Default Profile
 # Roger Tillmon
 # roger.tillmon@ineight.com
