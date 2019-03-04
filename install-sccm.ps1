@@ -1,13 +1,15 @@
-Add-Type -Name win -MemberDefinition '[DllImport("user32.dll")] public static extern bool ShowWindow(int handle, int state);' -Namespace native
-[native.win]::ShowWindow(([System.Diagnostics.Process]::GetCurrentProcess() | Get-Process).MainWindowHandle,0)
+#Add-Type -Name win -MemberDefinition '[DllImport("user32.dll")] public static extern bool ShowWindow(int handle, int state);' -Namespace native
+#[native.win]::ShowWindow(([System.Diagnostics.Process]::GetCurrentProcess() | Get-Process).MainWindowHandle,0)
 
 #ConfigMgr Client Installer
 #InEight - SiteCode: IN8
-#Created:  1-25-2019
-#Modified: 1-30-2019
+#Created:  01-25-2019
+#Modified: 02-28-2019
 #Author:  Roger Tillmon
+#LastChange:  Changed Ping Method for detecting MP to use Test-Connection cmdlet.
 
 $Error.Clear()
+
 Try
 {
     #Does The CCMEXEC Service Exist
@@ -20,16 +22,17 @@ Catch [System.Exception]
 
     #Set Variables
         $destination = "c:\sccminstall\"
-        $sccmzip = "c:\sccminstall\cm_client.zip"
-        $sccmurl = "http://cl1sscmmps001.harddollar.local/cm_client.zip"
+        $sccmzip = "c:\sccminstall\cm_client.zip"        
         $installer = "c:\sccminstall\ccmsetup.exe"
-        $mpcheck = Test-NetConnection -ComputerName "CL1SSCMMPS001.harddollar.local"
-        if ($mpcheck.PingSucceeded -eq "True") {
+        $mpcheck = Test-Connection -ComputerName "CL1SSCMMPS001.harddollar.local" -Count 1 -ErrorAction SilentlyContinue -ErrorVariable pingerr
+        if ($pingerr.Count -eq 0) {
             $arguments = "/retry:2 /UsePkiCert /mp:CL1SSCMMPS001.harddollar.local SMSSITECODE=IN8 FSP=CL1SSCMMPS001"
+            $sccmurl = "http://cl1sscmmps001.harddollar.local/cm_client.zip"
             $mp = "LOCAL MANAGEMENT POINT"
             }
         else {
             $arguments = "/UsePkiCert /NOCRLCheck SMSSITECODE=IN8 CCMHOSTNAME=CL1SCMCLMP001.CLOUDAPP.NET/CCM_Proxy_MutualAuth/72057594037937947"
+            $sccmurl = "https://cl1scmclmp001.cloudapp.net/cm_client.zip"
             $mp = "AZURE CLOUD MANAGEMENT GATEWAY"}
         Write-Host "Local Computer will install from $mp"
 
@@ -56,11 +59,13 @@ Catch [System.Exception]
     #Install ConfigMgr Client
         Write-Host "Installing ConfigMgr Client..."
         Set-Location $destination
-        .\ccmsetup.exe $arguments | Out-Null
+        Start-Process .\ccmsetup.exe $arguments
+        $nid = (Get-Process ccmsetup).Id
+        Wait-Process -Id $nid
 
     #Activate Interlocks, Dynotherms Connected, Infracells Are Up, Megathrusters are a go!
-        Write-Host "Sleep For 2 Minutes as Processes Launch for the First Time..."
-        Start-Sleep -s 120
+        Write-Host "Sleep For 5 Minutes as Processes Launch for the First Time..."
+        Start-Sleep -s 300
 
     #Copy CMTrace
         Write-Host "Copying CMTrace LogViewer to c:\windows\CCM..."
@@ -69,13 +74,14 @@ Catch [System.Exception]
 
     #Cleanup Source Directory
         Write-Host "Deleting Source Folder..."
-        Remove-Item $destination -Recurse -ErrorAction Ignore        
+        Set-Location C:\Windows\CCM\Logs
+        Remove-Item $destination -Recurse -ErrorAction SilentlyContinue        
 
 }
 
 Finally
 {
     Write-Host "CCMEXEC Service Status..."
-    $sccmpoststatus = Get-Service -Name ccmexec
+    $sccmpoststatus = Get-Service -Name ccmexec -ErrorAction SilentlyContinue
     Write-Host ConfigMgr Client is $sccmpoststatus.Status
 }
